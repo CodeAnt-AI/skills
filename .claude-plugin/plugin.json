@@ -1,7 +1,7 @@
 {
   "name": "codeant",
-  "version": "0.2.1",
-  "description": "AI-powered code review, secret scanning, security analysis, and static analysis with CodeAnt AI",
+  "version": "0.3.0",
+  "description": "AI-powered code review, PR comment auto-fix, secret scanning, security & static analysis with CodeAnt AI",
   "author": "CodeAnt AI",
   "homepage": "https://codeant.ai",
   "documentation": "https://docs.codeant.ai/cli/claude-code-integration",
@@ -9,10 +9,11 @@
   "license": "MIT",
   "keywords": [
     "code-review",
+    "auto-fix",
+    "pull-requests",
     "security",
     "static-analysis",
-    "secrets",
-    "linting"
+    "secrets"
   ],
   "prerequisites": {
     "commands": ["codeant"]

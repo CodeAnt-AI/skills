@@ -1,12 +1,12 @@
 ---
-description: CodeAnt AI code review, security scanning, and static analysis integration
+description: CodeAnt AI code review, PR auto-fix, security scanning, and static analysis integration
 globs:
 alwaysApply: true
 ---
 
 # CodeAnt AI Integration
 
-You have access to the CodeAnt AI CLI for code review, secret scanning, security analysis, and static analysis. Use these tools when the user asks you to review, scan, or analyze their code.
+You have access to the CodeAnt AI CLI for code review, PR comment auto-fix, secret scanning, security analysis, and static analysis. Use these tools when the user asks you to review, scan, analyze, or fix code.
 
 ## Available Commands
 
@@ -34,6 +34,36 @@ codeant static-analysis --uncommitted
 ```
 Detects code quality issues, bugs, and code smells. Add `--auto-fix` to automatically apply fixes.
 
+### Pull Request Management
+```bash
+codeant pr list
+```
+Lists open pull requests. Use `--state closed` for closed PRs, `--author <login>` to filter by author, `--source-branch <branch>` to filter by branch.
+
+### PR Comments (Auto-Fix Workflow)
+```bash
+codeant pr comments --pr-number <N> --codeant-generated true --addressed false
+```
+Fetches unaddressed CodeAnt review comments on a PR. The JSON output includes `filePath`, `lineStart`, `lineEnd`, `body`, `suggestedCode`, and `severity` for each comment.
+
+**Auto-fix flow:**
+1. Fetch unaddressed comments with the command above
+2. For each comment with `suggestedCode`, apply the fix directly
+3. For comments without suggestions, read the file context and implement a fix
+4. Run `codeant review --uncommitted` to verify
+
+### PR Details
+```bash
+codeant pr get --pr-number <N>
+```
+Get detailed PR info including additions, deletions, changed files, and review summary.
+
+### Search Comments
+```bash
+codeant comments search --query "<term>"
+```
+Search across all CodeAnt comments in the repository. Use `--include-addressed` to include resolved comments.
+
 ## Workflow Guidelines
 
 1. **After implementing a feature or fix**: Run `codeant review --uncommitted` to review your changes before committing.
@@ -45,6 +75,8 @@ Detects code quality issues, bugs, and code smells. Add `--auto-fix` to automati
 4. **For code quality**: Run `codeant static-analysis --uncommitted --auto-fix` to detect and fix code quality issues.
 
 5. **Review and fix loop**: When the user asks you to "review and fix", run the review first, then implement fixes for each issue found, then run the review again to verify.
+
+6. **PR auto-fix**: When the user asks to "fix PR comments" or "address review feedback", fetch unaddressed CodeAnt comments, apply fixes, and verify. Detect the current branch's PR automatically if no PR number is given.
 
 ## Output Handling
 

@@ -1,6 +1,6 @@
 # CodeAnt AI — Claude Code Plugin & Cursor Rules
 
-AI-powered code review, secret scanning, security analysis, and static analysis — integrated into your AI coding workflow.
+AI-powered code review, PR comment auto-fix, secret scanning, security analysis, and static analysis — integrated into your AI coding workflow.
 
 ## Claude Code
 
@@ -17,15 +17,32 @@ That's it. You now have access to:
 |---------|-------------|
 | `/codeant:review` | AI-powered code review on current changes |
 | `/codeant:review-fix` | Review code and automatically fix all issues |
+| `/codeant:check-pr` | Fetch unaddressed PR comments and fix them |
+| `/codeant:list-comments` | List review comments on a PR |
+| `/codeant:find-prs` | List and explore pull requests |
 
-### Usage
+### Usage Examples
 
 ```
 > /codeant:review
-> /codeant:review-fix
 > /codeant:review staged files only
-> /codeant:review against the develop branch
+> /codeant:check-pr 42
+> /codeant:check-pr
+> /codeant:list-comments 42
+> /codeant:find-prs my open PRs
+> /codeant:review-fix
 ```
+
+### Auto-Fix Workflow
+
+The `/codeant:check-pr` command enables a full auto-fix loop:
+
+1. Detects the PR for your current branch (or takes a PR number)
+2. Fetches all unaddressed CodeAnt review comments
+3. Applies suggested fixes where available
+4. Implements fixes for issues without suggestions
+5. Runs a verification review
+6. Reports what was fixed and what remains
 
 ## Cursor
 
@@ -42,7 +59,8 @@ Then ask Cursor naturally:
 
 ```
 Review my changes with CodeAnt
-Run a CodeAnt security scan
+Fix all unaddressed CodeAnt comments on PR #42
+List open PRs in this repo
 ```
 
 ## Prerequisites
@@ -52,6 +70,12 @@ Run a CodeAnt security scan
 ```bash
 npm install -g codeant-cli
 codeant login
+```
+
+- For PR features, configure your SCM token:
+
+```bash
+codeant set-token github <your-token>
 ```
 
 ## Documentation

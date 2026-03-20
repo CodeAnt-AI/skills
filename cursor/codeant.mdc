@@ -1,0 +1,62 @@
+---
+description: CodeAnt AI code review, security scanning, and static analysis integration
+globs:
+alwaysApply: true
+---
+
+# CodeAnt AI Integration
+
+You have access to the CodeAnt AI CLI for code review, secret scanning, security analysis, and static analysis. Use these tools when the user asks you to review, scan, or analyze their code.
+
+## Available Commands
+
+### AI Code Review
+```bash
+codeant review --uncommitted
+```
+Reviews uncommitted changes using an AI-powered agentic pipeline. Use `--staged` to review only staged files, `--last-commit` for the last commit, or `--base <branch>` to compare against a specific branch.
+
+### Secret Scanning
+```bash
+codeant secrets
+```
+Scans staged files for exposed secrets, API keys, and credentials. Use `--all` for branch diff, `--uncommitted` for all uncommitted changes.
+
+### Security Analysis
+```bash
+codeant security-analysis --uncommitted
+```
+Detects security vulnerabilities. Use `--fail-on MEDIUM` to include medium severity issues.
+
+### Static Analysis
+```bash
+codeant static-analysis --uncommitted
+```
+Detects code quality issues, bugs, and code smells. Add `--auto-fix` to automatically apply fixes.
+
+## Workflow Guidelines
+
+1. **After implementing a feature or fix**: Run `codeant review --uncommitted` to review your changes before committing.
+
+2. **Before committing**: Run `codeant secrets` to ensure no secrets are being committed.
+
+3. **For security-sensitive code**: Run `codeant security-analysis --uncommitted` to check for vulnerabilities.
+
+4. **For code quality**: Run `codeant static-analysis --uncommitted --auto-fix` to detect and fix code quality issues.
+
+5. **Review and fix loop**: When the user asks you to "review and fix", run the review first, then implement fixes for each issue found, then run the review again to verify.
+
+## Output Handling
+
+- CodeAnt outputs results to the terminal with color-coded severity levels
+- Parse the output to identify issues by file path, line number, and severity
+- When fixing issues, start with the highest severity (CRITICAL/BLOCKER) first
+- After fixing, always verify by running the scan again
+
+## Important Notes
+
+- Do NOT commit changes automatically after fixing issues — let the user review first
+- Limit review runs to 3 per changeset to avoid excessive API calls
+- The `--uncommitted` flag reviews staged + unstaged + untracked changes
+- The `--staged` flag reviews only staged files (useful for pre-commit checks)
+- Reviews may take 30-60 seconds depending on the scope of changes

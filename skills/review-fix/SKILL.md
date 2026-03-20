@@ -1,3 +1,8 @@
+---
+name: review-fix
+description: Review code with CodeAnt AI and automatically fix all identified issues
+---
+
 Run a full CodeAnt AI code review on uncommitted changes, then automatically fix all identified issues.
 
 ## Instructions

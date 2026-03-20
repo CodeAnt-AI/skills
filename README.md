@@ -1,56 +1,61 @@
-# CodeAnt AI Skills
+# CodeAnt AI — Claude Code Plugin & Cursor Rules
 
-Pre-built skills and rules for integrating [CodeAnt AI CLI](https://docs.codeant.ai/cli/setup) with AI-powered code editors.
+AI-powered code review, secret scanning, security analysis, and static analysis — integrated into your AI coding workflow.
 
-## Available Integrations
+## Claude Code
 
-### Claude Code
+### Install via Plugin System (Recommended)
 
-Slash commands for running CodeAnt directly inside Claude Code.
-
-**Quick setup:**
-
-```bash
-# Clone into your project's .claude/commands directory
-git clone https://github.com/CodeAnt-AI/skills.git /tmp/codeant-skills
-cp /tmp/codeant-skills/claude-code/*.md .claude/commands/
+```
+/plugin marketplace add CodeAnt-AI/skills
+/plugin install codeant
 ```
 
-Or install globally:
-
-```bash
-mkdir -p ~/.claude/commands
-git clone https://github.com/CodeAnt-AI/skills.git /tmp/codeant-skills
-cp /tmp/codeant-skills/claude-code/*.md ~/.claude/commands/
-```
-
-**Available commands:**
+That's it. You now have access to:
 
 | Command | Description |
 |---------|-------------|
-| `/review` | AI-powered code review on current changes |
-| `/codeant-review-fix` | Review code and automatically fix all issues |
+| `/codeant:review` | AI-powered code review on current changes |
+| `/codeant:review-fix` | Review code and automatically fix all issues |
 
-### Cursor
+### Usage
 
-Cursor rules for integrating CodeAnt into your Cursor AI workflows.
+```
+> /codeant:review
+> /codeant:review-fix
+> /codeant:review staged files only
+> /codeant:review against the develop branch
+```
 
-**Quick setup:**
+## Cursor
+
+### Install
 
 ```bash
 mkdir -p .cursor/rules
 git clone https://github.com/CodeAnt-AI/skills.git /tmp/codeant-skills
 cp /tmp/codeant-skills/cursor/codeant.mdc .cursor/rules/
+rm -rf /tmp/codeant-skills
+```
+
+Then ask Cursor naturally:
+
+```
+Review my changes with CodeAnt
+Run a CodeAnt security scan
 ```
 
 ## Prerequisites
 
-- [CodeAnt CLI](https://docs.codeant.ai/cli/setup) installed and authenticated
-- For Claude Code: Claude Code CLI installed
-- For Cursor: Cursor IDE installed
+- [CodeAnt CLI](https://docs.codeant.ai/cli/setup) installed and authenticated:
+
+```bash
+npm install -g codeant-cli
+codeant login
+```
 
 ## Documentation
 
 - [Claude Code Integration Guide](https://docs.codeant.ai/cli/claude-code-integration)
 - [Cursor Integration Guide](https://docs.codeant.ai/cli/cursor-integration)
-- [CodeAnt CLI Documentation](https://docs.codeant.ai/cli/setup)
+- [CodeAnt CLI Docs](https://docs.codeant.ai/cli/setup)

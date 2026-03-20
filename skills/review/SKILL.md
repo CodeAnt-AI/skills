@@ -1,3 +1,8 @@
+---
+name: review
+description: Run an AI-powered CodeAnt code review on your current changes
+---
+
 Run a CodeAnt AI code review on the current changes and report the findings.
 
 ## Instructions

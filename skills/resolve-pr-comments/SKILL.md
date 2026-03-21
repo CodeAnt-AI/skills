@@ -65,11 +65,14 @@ The output is a JSON array of comment objects with these fields:
 | `isCodeantComment` | Boolean — true if posted by CodeAnt                             |
 | `resolved`         | Boolean — true if the comment has been marked resolved          |
 
-**Filter to unresolved comments only**: From the returned array, keep only comments where `resolved` is `false`. If all comments are resolved, tell the user "All CodeAnt comments on PR #N are already resolved." and stop.
+**Filter comments**: From the returned array:
+1. Keep only comments where `resolved` is `false`.
+2. **Skip general PR comments** (`type` is `"issue"` or `path` is null) — these are purely informational (status updates, sequence diagrams, quality gate results) and require no action. Do NOT include them in the summary or flag them for manual review.
+3. If no actionable comments remain after filtering, tell the user "All CodeAnt comments on PR #N are already resolved or informational." and stop.
 
 ### Step 3 — Categorize the Comments
 
-Go through each unresolved comment and categorize it:
+Go through each remaining unresolved comment and categorize it:
 
 **Inline code comments** (`type` is `"review"` and `path` is not null):
 - These point to a specific file and line — they are actionable.
@@ -77,10 +80,6 @@ Go through each unresolved comment and categorize it:
   - A description of the issue
   - A code suggestion embedded in a markdown fenced code block
   - Sometimes a `suggestion` block (GitHub-style suggested change)
-
-**General PR comments** (`type` is `"issue"` or `path` is null):
-- These are PR-level feedback (architecture, design, process).
-- Flag these as "Requires manual review" — do NOT attempt to auto-fix.
 
 ### Step 4 — Analyze Each Comment and Assign a Verdict
 
@@ -189,9 +188,6 @@ For each, show:
 - File path and line number
 - What the comment expected to find vs. what's actually there now
 
-**Requires manual review (N):**
-- PR-level comments that don't point to specific code — summarize each one.
-
 Then ask the user: "I will apply the N ACCEPT fixes now. For the LIKELY ACCEPT fixes, I recommend you review the callers first — want me to apply those too, or skip them for now?"
 
 ### Step 6 — Apply the Fixes
@@ -217,9 +213,6 @@ Present a final report:
 
 **Not applied — STALE (N comments):**
 - For each: file, line, what changed since the review.
-
-**Requires manual review (N comments):**
-- For each: the PR-level comment body summarized.
 
 ### Important Rules
 

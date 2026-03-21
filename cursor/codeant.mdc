@@ -1,94 +1,119 @@
 ---
-description: CodeAnt AI code review, PR auto-fix, security scanning, and static analysis integration
+description: CodeAnt AI code review and PR comment resolution integration
 globs:
 alwaysApply: true
 ---
 
 # CodeAnt AI Integration
 
-You have access to the CodeAnt AI CLI for code review, PR comment auto-fix, secret scanning, security analysis, and static analysis. Use these tools when the user asks you to review, scan, analyze, or fix code.
+You have access to the CodeAnt AI CLI for code review and PR comment resolution. Use these tools when the user asks you to review code, fix PR comments, or address review feedback.
 
-## Available Commands
+## Core Workflows
 
-### AI Code Review
+### 1. Review Local Changes
+
+Run an AI-powered code review on local changes and fix all issues found.
+
+**Run the review:**
 ```bash
 codeant review --uncommitted
 ```
-Reviews uncommitted changes using an AI-powered agentic pipeline. Use `--staged` to review only staged files, `--last-commit` for the last commit, or `--base <branch>` to compare against a specific branch.
 
-### Secret Scanning
+Scope flags:
+- `--uncommitted` — staged + unstaged + untracked (default)
+- `--staged` — only staged files
+- `--last-commit` — last commit only
+- `--last-n-commits <N>` — last N commits (max 5)
+- `--committed` — unpushed commits only
+- `--base <branch>` — compare against a specific branch
+- `--base-commit <hash>` — compare against a specific commit
+- `--all` — committed + uncommitted together
+
+The review output contains code suggestions, each with:
+- `issue_content` — description of the problem
+- `relevant_file` — file path
+- `start_line` — line number
+- `label` — category (Code Quality, Security, Performance, Maintainability)
+
+**Fix flow:**
+1. Run the review with the appropriate scope flag
+2. For each issue, read the file with surrounding context (25 lines above/below)
+3. Validate the fix is safe before applying — check it doesn't break return types, control flow, or error handling
+4. Apply only minimal changes that address the specific issue
+5. Skip fixes that could break existing logic — flag them for the user
+
+### 2. Resolve PR Comments
+
+Fetch unresolved CodeAnt AI review comments on a PR and fix them.
+
+**Find the PR for the current branch:**
 ```bash
-codeant secrets
+codeant pr list --source-branch "<branch-name>" --state open --limit 5
 ```
-Scans staged files for exposed secrets, API keys, and credentials. Use `--all` for branch diff, `--uncommitted` for all uncommitted changes.
 
-### Security Analysis
+Output is a JSON array with: `number`, `title`, `state`, `author`, `sourceBranch`, `targetBranch`, `url`.
+
+**Fetch CodeAnt comments:**
 ```bash
-codeant security-analysis --uncommitted
+codeant pr comments --pr-number <N> --codeant-generated true
 ```
-Detects security vulnerabilities. Use `--fail-on MEDIUM` to include medium severity issues.
 
-### Static Analysis
-```bash
-codeant static-analysis --uncommitted
-```
-Detects code quality issues, bugs, and code smells. Add `--auto-fix` to automatically apply fixes.
+Output is a JSON array with:
+- `id` — comment identifier
+- `type` — `"review"` (inline on code) or `"issue"` (general PR comment)
+- `author` — comment author
+- `body` — full comment text in markdown (may contain code suggestions in fenced blocks)
+- `path` — file path (null for general comments)
+- `line` — line number (null for general comments)
+- `isCodeantComment` — boolean
+- `resolved` — boolean
 
-### Pull Request Management
-```bash
-codeant pr list
-```
-Lists open pull requests. Use `--state closed` for closed PRs, `--author <login>` to filter by author, `--source-branch <branch>` to filter by branch.
+**Fix flow:**
+1. Filter to comments where `resolved` is `false`
+2. Separate inline comments (`type: "review"`, `path` not null) from general comments (`path` is null)
+3. For each inline comment:
+   - Read the file at the comment's `line` with 30 lines of context above/below
+   - Check that the code at the referenced line still matches what the comment describes
+   - Extract any code suggestion from the `body` markdown
+   - Validate the suggestion is safe: correct syntax, variables in scope, imports present, no logic breakage
+   - Apply only if safe — skip and explain if not
+4. General/PR-level comments cannot be auto-fixed — flag them for the user
 
-### PR Comments (Auto-Fix Workflow)
-```bash
-codeant pr comments --pr-number <N> --codeant-generated true --addressed false
-```
-Fetches unaddressed CodeAnt review comments on a PR. The JSON output includes `filePath`, `lineStart`, `lineEnd`, `body`, `suggestedCode`, and `severity` for each comment.
+## Other Useful Commands
 
-**Auto-fix flow:**
-1. Fetch unaddressed comments with the command above
-2. For each comment with `suggestedCode`, apply the fix directly
-3. For comments without suggestions, read the file context and implement a fix
-4. Run `codeant review --uncommitted` to verify
-
-### PR Details
+**PR details:**
 ```bash
 codeant pr get --pr-number <N>
 ```
-Get detailed PR info including additions, deletions, changed files, and review summary.
+Returns: `number`, `title`, `state`, `author`, `sourceBranch`, `targetBranch`, `body`, `additions`, `deletions`, `changedFiles`, `reviewSummary`.
 
-### Search Comments
+**Search comments:**
 ```bash
-codeant comments search --query "<term>"
+codeant comments search --query "<term>" --limit 10
 ```
-Search across all CodeAnt comments in the repository. Use `--include-addressed` to include resolved comments.
+Search across all CodeAnt comments. Add `--include-addressed` to include resolved ones.
 
-## Workflow Guidelines
+**Static analysis with auto-fix:**
+```bash
+codeant static-analysis --uncommitted --auto-fix
+```
 
-1. **After implementing a feature or fix**: Run `codeant review --uncommitted` to review your changes before committing.
+**Security analysis:**
+```bash
+codeant security-analysis --uncommitted
+```
 
-2. **Before committing**: Run `codeant secrets` to ensure no secrets are being committed.
+**Secret scanning:**
+```bash
+codeant secrets --uncommitted
+```
 
-3. **For security-sensitive code**: Run `codeant security-analysis --uncommitted` to check for vulnerabilities.
+## Important Rules
 
-4. **For code quality**: Run `codeant static-analysis --uncommitted --auto-fix` to detect and fix code quality issues.
-
-5. **Review and fix loop**: When the user asks you to "review and fix", run the review first, then implement fixes for each issue found, then run the review again to verify.
-
-6. **PR auto-fix**: When the user asks to "fix PR comments" or "address review feedback", fetch unaddressed CodeAnt comments, apply fixes, and verify. Detect the current branch's PR automatically if no PR number is given.
-
-## Output Handling
-
-- CodeAnt outputs results to the terminal with color-coded severity levels
-- Parse the output to identify issues by file path, line number, and severity
-- When fixing issues, start with the highest severity (CRITICAL/BLOCKER) first
-- After fixing, always verify by running the scan again
-
-## Important Notes
-
-- Do NOT commit changes automatically after fixing issues — let the user review first
-- Limit review runs to 3 per changeset to avoid excessive API calls
-- The `--uncommitted` flag reviews staged + unstaged + untracked changes
-- The `--staged` flag reviews only staged files (useful for pre-commit checks)
-- Reviews may take 30-60 seconds depending on the scope of changes
+- Do NOT commit or push changes automatically — let the user review diffs first
+- Do NOT apply a fix if you cannot verify it is safe — skip and explain why
+- Keep fixes minimal — change only what is necessary to address the specific issue
+- Do not refactor, rename, or "improve" surrounding code beyond the reported issue
+- Reviews may take 30–90 seconds depending on the size of the changes
+- The `--uncommitted` flag covers staged + unstaged + untracked changes
+- The `--staged` flag covers only staged files (useful for pre-commit checks)

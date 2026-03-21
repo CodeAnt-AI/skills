@@ -1,6 +1,6 @@
 # CodeAnt AI — Claude Code Plugin & Cursor Rules
 
-AI-powered code review, PR comment auto-fix, secret scanning, security analysis, and static analysis — integrated into your AI coding workflow.
+AI-powered code review and PR comment resolution — integrated into your AI coding workflow.
 
 ## Claude Code
 
@@ -15,34 +15,40 @@ That's it. You now have access to:
 
 | Command | Description |
 |---------|-------------|
-| `/codeant:review` | AI-powered code review on current changes |
-| `/codeant:review-fix` | Review code and automatically fix all issues |
-| `/codeant:check-pr` | Fetch unaddressed PR comments and fix them |
-| `/codeant:list-comments` | List review comments on a PR |
-| `/codeant:find-prs` | List and explore pull requests |
+| `/codeant:resolve-pr-comments` | Fetch all unaddressed CodeAnt review comments on a PR and fix them |
+| `/codeant:review-local` | Run a CodeAnt code review on local changes and fix all issues |
 
 ### Usage Examples
 
 ```
-> /codeant:review
-> /codeant:review staged files only
-> /codeant:check-pr 42
-> /codeant:check-pr
-> /codeant:list-comments 42
-> /codeant:find-prs my open PRs
-> /codeant:review-fix
+> /codeant:resolve-pr-comments 42
+> /codeant:resolve-pr-comments
+> /codeant:review-local
+> /codeant:review-local staged files only
+> /codeant:review-local last commit
 ```
 
-### Auto-Fix Workflow
+### Resolve PR Comments Workflow
 
-The `/codeant:check-pr` command enables a full auto-fix loop:
+The `/codeant:resolve-pr-comments` command enables a full auto-fix loop:
 
 1. Detects the PR for your current branch (or takes a PR number)
 2. Fetches all unaddressed CodeAnt review comments
-3. Applies suggested fixes where available
-4. Implements fixes for issues without suggestions
-5. Runs a verification review
-6. Reports what was fixed and what remains
+3. Presents a summary grouped by file and severity
+4. Applies suggested fixes where available
+5. Implements fixes for issues without suggestions
+6. Runs a verification review
+7. Reports what was fixed and what remains
+
+### Review Local Workflow
+
+The `/codeant:review-local` command reviews and fixes your local changes:
+
+1. Runs a CodeAnt AI review on your uncommitted, staged, or last commit changes
+2. Presents findings grouped by severity with security issues highlighted first
+3. Fixes every issue found, starting with critical severity
+4. Runs a verification review to confirm all fixes are clean
+5. Reports initial findings, fixes applied, and verification results
 
 ## Cursor
 
@@ -60,7 +66,6 @@ Then ask Cursor naturally:
 ```
 Review my changes with CodeAnt
 Fix all unaddressed CodeAnt comments on PR #42
-List open PRs in this repo
 ```
 
 ## Prerequisites

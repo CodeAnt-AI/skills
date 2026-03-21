@@ -1,0 +1,34 @@
+{
+  "name": "codeant",
+  "owner": {
+    "name": "CodeAnt AI",
+    "email": "support@codeant.ai"
+  },
+  "metadata": {
+    "description": "AI-powered code review and PR comment resolution with CodeAnt AI",
+    "version": "0.4.0"
+  },
+  "plugins": [
+    {
+      "name": "codeant",
+      "source": ".",
+      "description": "AI-powered code review and PR comment resolution with CodeAnt AI",
+      "version": "0.4.0",
+      "author": {
+        "name": "CodeAnt AI",
+        "email": "support@codeant.ai"
+      },
+      "homepage": "https://codeant.ai",
+      "repository": "https://github.com/CodeAnt-AI/skills",
+      "license": "MIT",
+      "keywords": [
+        "code-review",
+        "auto-fix",
+        "pull-requests",
+        "security",
+        "static-analysis"
+      ],
+      "category": "code-quality"
+    }
+  ]
+}

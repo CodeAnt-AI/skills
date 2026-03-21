@@ -2,7 +2,10 @@
   "name": "codeant",
   "version": "0.4.0",
   "description": "AI-powered code review and PR comment resolution with CodeAnt AI",
-  "author": "CodeAnt AI",
+  "author": {
+    "name": "CodeAnt AI",
+    "email": "support@codeant.ai"
+  },
   "homepage": "https://codeant.ai",
   "documentation": "https://docs.codeant.ai/cli/claude-code-integration",
   "repository": "https://github.com/CodeAnt-AI/skills",

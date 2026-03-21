@@ -82,27 +82,11 @@ Go through each unresolved comment and categorize it:
 - These are PR-level feedback (architecture, design, process).
 - Flag these as "Requires manual review" — do NOT attempt to auto-fix.
 
-### Step 4 — Present a Summary
-
-Before making any changes, present a clear summary:
-
-- **PR**: #N — "title" (link to PR)
-- **Total unresolved CodeAnt comments**: X
-- **Actionable** (inline with file + line): Y
-- **Manual review needed** (general/PR-level): Z
-
-For each actionable comment, show:
-- File path and line number
-- A one-line summary of what the comment is asking for (extracted from the `body`)
-- Whether the comment includes a code suggestion
-
-Ask the user: "Shall I proceed to fix the Y actionable comments?" Wait for confirmation before making changes.
-
-### Step 5 — Fix Each Actionable Comment
+### Step 4 — Analyze Each Comment and Assign a Verdict
 
 For each inline comment (grouped by file to minimize re-reading), do the following:
 
-#### 5a. Read and Understand the Context
+#### 4a. Read and Understand the Context
 
 1. Read the file at the comment's `line` number, with **30 lines above and 30 lines below** for full context.
 2. Read the comment `body` carefully. Identify:
@@ -110,11 +94,11 @@ For each inline comment (grouped by file to minimize re-reading), do the followi
    - **Is there a code suggestion?** — Look for fenced code blocks (` ```suggestion `, ` ```python `, ` ```js `, etc.) or inline code that represents a replacement.
    - **What is the intent?** — What behavior should the code have after the fix.
 
-#### 5b. Validate Before Applying
+#### 4b. Validate the Suggestion
 
-This is the most critical step. Before making ANY change:
+For each comment, run through these checks:
 
-1. **Check that the code the comment references still exists.** The file may have changed since the review. If the code at the referenced line no longer matches what the comment describes, skip this comment and flag it as "Code has changed since review — manual check needed."
+1. **Check that the code the comment references still exists.** The file may have changed since the review. If the code at the referenced line no longer matches what the comment describes, mark as `STALE`.
 
 2. **If a code suggestion is present in the body:**
    - Extract the suggested code from the markdown.
@@ -128,33 +112,111 @@ This is the most critical step. Before making ANY change:
      - Does it alter control flow in a way that affects callers?
      - Does it remove error handling or null checks?
      - Does it change the behavior for edge cases?
-   - If the suggestion passes all checks, apply it.
-   - If it fails any check, **do NOT apply it**. Instead, flag it: "Suggestion may break existing logic — [specific reason]. Skipping."
 
 3. **If no code suggestion is present:**
    - Analyze the comment to understand the requested change.
-   - Write a **minimal fix** — change only what is necessary to address the concern.
+   - Draft a **minimal fix** — change only what is necessary to address the concern.
    - Do NOT refactor surrounding code, rename variables, or "improve" things beyond the scope of the comment.
-   - Apply the same validation checks as above before writing the fix.
+   - Run the same validation checks as above on your drafted fix.
 
-#### 5c. Apply the Fix
+#### 4c. Assign a Verdict to Each Comment
 
-- Make the smallest possible change that addresses the comment.
+Based on the validation, assign one of these verdicts to every comment:
+
+**ACCEPT — Safe to apply, you should accept this.**
+Assign this when ALL of these are true:
+- The suggestion fixes a genuine bug, security issue, or correctness problem
+- The suggested code is syntactically valid and all variables/imports are in scope
+- The change does NOT alter the function's return type, signature, or public API
+- The change does NOT remove or weaken existing error handling
+- The change does NOT affect behavior for inputs that were previously handled correctly
+- The fix is localized — it only touches the lines relevant to the issue
+
+**LIKELY ACCEPT — Looks correct, but verify the callers.**
+Assign this when:
+- The suggestion is logically sound and fixes a real issue
+- BUT it changes behavior in a way that callers or tests might depend on (e.g., a function now returns an error where it previously returned nil, or a previously permissive validation now rejects some inputs)
+- The fix itself is correct, but you cannot guarantee no downstream breakage without checking callers
+
+
+**DO NOT ACCEPT — This could break things.**
+Assign this when ANY of these are true:
+- The suggestion changes a function's return type or public interface
+- The suggestion removes existing error handling or fallback logic
+- The suggestion restructures control flow (reordering if/else, changing loop logic) beyond what the comment asks for
+- The suggestion introduces a dependency or import that doesn't exist in the project
+- The suggestion looks like a refactor disguised as a fix — it changes more than necessary
+- You cannot understand what the suggestion does or why it's better
+
+**STALE — Code has changed since the review.**
+Assign this when:
+- The code at the referenced line no longer matches what the comment describes
+- The file has been renamed or deleted
+
+### Step 5 — Present the Summary with Verdicts
+
+Before making any changes, present a clear summary to the user:
+
+- **PR**: #N — "title" (link to PR)
+- **Total unresolved CodeAnt comments**: X
+
+Then list every comment grouped by verdict:
+
+**ACCEPT — Safe to apply (N):**
+For each, show:
+- File path and line number
+- One-line summary of the issue
+- One-line explanation of why this is safe: what exactly the fix does and why it cannot break anything
+- The actual code change (before → after) so the user can see it
+
+**LIKELY ACCEPT — Verify callers (N):**
+For each, show:
+- File path and line number
+- One-line summary of the issue
+- What the fix changes and why it's probably correct
+- What could break: specifically which callers, tests, or behaviors to check
+- The actual code change (before → after)
+
+**DO NOT ACCEPT — Could break logic (N):**
+For each, show:
+- File path and line number
+- One-line summary of what the comment asks for
+- Specific reason why the suggestion is risky — what exactly could break
+- What the user should do instead (e.g., "review manually", "check with the team", "test this path first")
+
+**STALE — Code changed since review (N):**
+For each, show:
+- File path and line number
+- What the comment expected to find vs. what's actually there now
+
+**Requires manual review (N):**
+- PR-level comments that don't point to specific code — summarize each one.
+
+Then ask the user: "I will apply the N ACCEPT fixes now. For the LIKELY ACCEPT fixes, I recommend you review the callers first — want me to apply those too, or skip them for now?"
+
+### Step 6 — Apply the Fixes
+
+After the user confirms:
+
+- Apply all **ACCEPT** fixes.
+- Apply **LIKELY ACCEPT** fixes only if the user said yes.
+- Do **NOT** apply DO NOT ACCEPT or STALE fixes.
+- Make the smallest possible change that addresses each comment.
 - If the fix requires adding an import, add it.
 - If multiple comments refer to the same file, apply all fixes to that file before moving to the next file, being careful that fixes don't conflict with each other.
 
-### Step 6 — Report Results
+### Step 7 — Report Results
 
 Present a final report:
 
-**Fixed (N comments):**
-- For each: file, line, one-line summary of what was changed.
+**Applied (N comments):**
+- For each: file, line, one-line summary of what was changed, and the verdict (ACCEPT or LIKELY ACCEPT).
 
-**Skipped — code changed since review (N comments):**
-- For each: file, line, reason the code no longer matches.
+**Not applied — DO NOT ACCEPT (N comments):**
+- For each: file, line, specific reason the suggestion is risky.
 
-**Skipped — suggestion may break logic (N comments):**
-- For each: file, line, specific reason the suggestion was unsafe.
+**Not applied — STALE (N comments):**
+- For each: file, line, what changed since the review.
 
 **Requires manual review (N comments):**
 - For each: the PR-level comment body summarized.

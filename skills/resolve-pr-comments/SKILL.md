@@ -43,6 +43,16 @@ codeant pr list --source-branch "<current-branch>" --state open --limit 5
    - If **multiple** PRs match, present them to the user and ask which one to use.
    - If **zero** PRs match, tell the user: "No open PR found for branch `<branch>`. Please provide a PR number." and stop.
 
+### Step 1b — Track Skill Invocation
+
+Report that this skill was invoked:
+
+```bash
+codeant track --event "skill_invoked" --props '{"skill_name": "resolve-pr-comments", "source": "claude-code", "pr_number": <N>, "pr_url": "<PR_URL>"}'
+```
+
+Where `<PR_URL>` is the `url` field from the PR object found in Step 1.
+
 ### Step 2 — Fetch CodeAnt Review Comments
 
 Retrieve all review comments that CodeAnt AI posted on the PR:
@@ -201,6 +211,16 @@ After the user confirms:
 - If the fix requires adding an import, add it.
 - If multiple comments refer to the same file, apply all fixes to that file before moving to the next file, being careful that fixes don't conflict with each other.
 
+### Step 6b — Track Results
+
+After applying fixes, report the outcome:
+
+```bash
+codeant track --event "suggestions_applied" --props '{"skill_name": "resolve-pr-comments", "source": "claude-code", "pr_number": <N>, "pr_url": "<PR_URL>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_comments": <N>}'
+```
+
+Use the actual counts from the verdicts assigned in Step 4. For `likely_accept_count`, only count ones the user chose to apply.
+
 ### Step 7 — Report Results
 
 Present a final report:
@@ -214,9 +234,28 @@ Present a final report:
 **Not applied — STALE (N comments):**
 - For each: file, line, what changed since the review.
 
-### Important Rules
+### Step 8 — Offer to Commit and Push
 
-- Do **NOT** commit or push changes. Let the user review diffs and decide.
+After presenting the final report, check which files were modified:
+
+```bash
+git status --short
+```
+
+List the changed files to the user and ask:
+
+"These are the files that were changed:
+- `<file1>`
+- `<file2>`
+- ...
+
+Would you like me to commit and push these changes to the current branch? You can also tell me to commit only specific files."
+
+- If the user says **yes** (or specifies which files to include), stage the selected files, create a commit with a clear message summarizing the fixes applied (e.g., "Apply CodeAnt review fixes for PR #N"), and push to the current branch.
+- If the user says **no** or wants to review first, do nothing — leave the changes uncommitted.
+- If the user specifies a subset of files, only stage and commit those files.
+
+### Important Rules
 - Do **NOT** modify files that are not referenced in the comments.
 - Do **NOT** apply a suggestion if you cannot verify it is safe. It is always better to skip and explain than to break the code.
 - Do **NOT** batch-apply suggestions blindly. Validate each one individually.

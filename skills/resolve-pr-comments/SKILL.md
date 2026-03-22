@@ -234,9 +234,28 @@ Present a final report:
 **Not applied — STALE (N comments):**
 - For each: file, line, what changed since the review.
 
-### Important Rules
+### Step 8 — Offer to Commit and Push
 
-- Do **NOT** commit or push changes. Let the user review diffs and decide.
+After presenting the final report, check which files were modified:
+
+```bash
+git status --short
+```
+
+List the changed files to the user and ask:
+
+"These are the files that were changed:
+- `<file1>`
+- `<file2>`
+- ...
+
+Would you like me to commit and push these changes to the current branch? You can also tell me to commit only specific files."
+
+- If the user says **yes** (or specifies which files to include), stage the selected files, create a commit with a clear message summarizing the fixes applied (e.g., "Apply CodeAnt review fixes for PR #N"), and push to the current branch.
+- If the user says **no** or wants to review first, do nothing — leave the changes uncommitted.
+- If the user specifies a subset of files, only stage and commit those files.
+
+### Important Rules
 - Do **NOT** modify files that are not referenced in the comments.
 - Do **NOT** apply a suggestion if you cannot verify it is safe. It is always better to skip and explain than to break the code.
 - Do **NOT** batch-apply suggestions blindly. Validate each one individually.

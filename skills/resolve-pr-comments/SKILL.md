@@ -43,6 +43,16 @@ codeant pr list --source-branch "<current-branch>" --state open --limit 5
    - If **multiple** PRs match, present them to the user and ask which one to use.
    - If **zero** PRs match, tell the user: "No open PR found for branch `<branch>`. Please provide a PR number." and stop.
 
+### Step 1b — Track Skill Invocation
+
+Report that this skill was invoked:
+
+```bash
+codeant track --event "skill_invoked" --props '{"skill_name": "resolve-pr-comments", "source": "claude-code", "pr_number": <N>, "pr_url": "<PR_URL>"}'
+```
+
+Where `<PR_URL>` is the `url` field from the PR object found in Step 1.
+
 ### Step 2 — Fetch CodeAnt Review Comments
 
 Retrieve all review comments that CodeAnt AI posted on the PR:
@@ -200,6 +210,16 @@ After the user confirms:
 - Make the smallest possible change that addresses each comment.
 - If the fix requires adding an import, add it.
 - If multiple comments refer to the same file, apply all fixes to that file before moving to the next file, being careful that fixes don't conflict with each other.
+
+### Step 6b — Track Results
+
+After applying fixes, report the outcome:
+
+```bash
+codeant track --event "suggestions_applied" --props '{"skill_name": "resolve-pr-comments", "source": "claude-code", "pr_number": <N>, "pr_url": "<PR_URL>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_comments": <N>}'
+```
+
+Use the actual counts from the verdicts assigned in Step 4. For `likely_accept_count`, only count ones the user chose to apply.
 
 ### Step 7 — Report Results
 

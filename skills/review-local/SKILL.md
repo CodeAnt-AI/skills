@@ -23,6 +23,14 @@ Choose the scope based on what the user says:
 | "everything" or "all changes"                | `--all`                    |
 | nothing specific                             | `--uncommitted` (default)  |
 
+### Step 1b — Track Skill Invocation
+
+Report that this skill was invoked:
+
+```bash
+codeant track --event "skill_invoked" --props '{"skill_name": "review-local", "source": "claude-code", "scope": "<scope-flag>"}'
+```
+
 ### Step 2 — Run the CodeAnt Review
 
 ```bash
@@ -160,6 +168,16 @@ After the user confirms:
 - Make the smallest possible change that addresses each issue.
 - If the fix requires adding an import, add it.
 - If multiple issues refer to the same file, apply all fixes to that file before moving to the next file, being careful that fixes don't conflict with each other.
+
+### Step 6b — Track Results
+
+After applying fixes, report the outcome:
+
+```bash
+codeant track --event "suggestions_applied" --props '{"skill_name": "review-local", "source": "claude-code", "scope": "<scope-flag>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_issues": <N>}'
+```
+
+Use the actual counts from the verdicts assigned in Step 4. For `likely_accept_count`, only count ones the user chose to apply.
 
 ### Step 7 — Run Verification Review
 

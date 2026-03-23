@@ -234,7 +234,30 @@ Present a final report:
 **Not applied — STALE (N comments):**
 - For each: file, line, what changed since the review.
 
-### Step 8 — Offer to Commit and Push
+### Step 8 — Resolve Applied Conversations
+
+After applying fixes, resolve the corresponding review conversations on the PR so they no longer show as unresolved. For each comment that was successfully applied (ACCEPT and user-approved LIKELY ACCEPT), run:
+
+```bash
+codeant pr resolve --pr-number <N> --comment-id <COMMENT_ID>
+```
+
+The `--comment-id` flag takes the comment's `id` field from Step 2. The CLI will auto-detect the remote and repo, but you can also pass `--remote` and `--name` explicitly.
+
+**Platform-specific notes:**
+- **GitHub**: Uses `--comment-id` (the numeric comment ID). The CLI resolves the review thread containing that comment via the GraphQL API. If you already have the GraphQL thread node ID, you can pass `--thread-id` instead.
+- **GitLab**: Uses `--discussion-id` (the discussion ID from the comment's `discussionId` field).
+- **Bitbucket**: Uses `--comment-id` (the numeric comment ID).
+- **Azure DevOps**: Uses `--thread-id` (the numeric thread ID from the comment's `threadId` field).
+
+Run these in sequence (one per applied comment). If a resolve call fails (e.g., insufficient permissions), log a warning but do **not** stop — continue resolving the remaining comments and report any failures in the final summary.
+
+**Do NOT resolve:**
+- Comments marked DO NOT ACCEPT or STALE
+- Comments the user chose to skip
+- General PR comments (`type` is `"issue"`)
+
+### Step 9 — Offer to Commit and Push
 
 After presenting the final report, check which files were modified:
 
@@ -254,6 +277,28 @@ Would you like me to commit and push these changes to the current branch? You ca
 - If the user says **yes** (or specifies which files to include), stage the selected files, create a commit with a clear message summarizing the fixes applied (e.g., "Apply CodeAnt review fixes for PR #N"), and push to the current branch.
 - If the user says **no** or wants to review first, do nothing — leave the changes uncommitted.
 - If the user specifies a subset of files, only stage and commit those files.
+
+### Step 0 — Ensure codeant-cli is up to date
+
+Before doing anything else, check that the `codeant` CLI is on the latest version:
+
+```bash
+npm view codeant-cli version
+```
+
+Compare this with the installed version:
+
+```bash
+codeant --version
+```
+
+If the installed version is older than the latest published version, update it:
+
+```bash
+npm install -g codeant-cli@latest
+```
+
+If the update fails (e.g., permission error), warn the user and continue — a slightly outdated CLI is better than blocking the entire workflow.
 
 ### Important Rules
 - Do **NOT** modify files that are not referenced in the comments.

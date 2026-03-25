@@ -17,6 +17,7 @@ That's it. You now have access to:
 |---------|-------------|
 | `/codeant-resolve-pr-comments` | Fetch all unaddressed CodeAnt review comments on a PR and fix them |
 | `/codeant-review` | Run a CodeAnt code review on local changes and fix all issues |
+| `/codeant-implement-repo-learnings` | Learn team review patterns from PR history and guidelines, generate custom rules in `.codeant/review.json` |
 
 ### Usage Examples
 
@@ -26,6 +27,7 @@ That's it. You now have access to:
 > /codeant-review
 > /codeant-review staged files only
 > /codeant-review last commit
+> /codeant-implement-repo-learnings
 ```
 
 ### Resolve PR Comments Workflow

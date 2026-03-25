@@ -15,22 +15,22 @@ That's it. You now have access to:
 
 | Command | Description |
 |---------|-------------|
-| `/codeant:resolve-pr-comments` | Fetch all unaddressed CodeAnt review comments on a PR and fix them |
-| `/codeant:review-local` | Run a CodeAnt code review on local changes and fix all issues |
+| `/codeant-resolve-pr-comments` | Fetch all unaddressed CodeAnt review comments on a PR and fix them |
+| `/codeant-review` | Run a CodeAnt code review on local changes and fix all issues |
 
 ### Usage Examples
 
 ```
-> /codeant:resolve-pr-comments 42
-> /codeant:resolve-pr-comments
-> /codeant:review-local
-> /codeant:review-local staged files only
-> /codeant:review-local last commit
+> /codeant-resolve-pr-comments 42
+> /codeant-resolve-pr-comments
+> /codeant-review
+> /codeant-review staged files only
+> /codeant-review last commit
 ```
 
 ### Resolve PR Comments Workflow
 
-The `/codeant:resolve-pr-comments` command enables a full auto-fix loop:
+The `/codeant-resolve-pr-comments` command enables a full auto-fix loop:
 
 1. Detects the PR for your current branch (or takes a PR number)
 2. Fetches all unaddressed CodeAnt review comments
@@ -42,7 +42,7 @@ The `/codeant:resolve-pr-comments` command enables a full auto-fix loop:
 
 ### Review Local Workflow
 
-The `/codeant:review-local` command reviews and fixes your local changes:
+The `/codeant-review` command reviews and fixes your local changes:
 
 1. Runs a CodeAnt AI review on your uncommitted, staged, or last commit changes
 2. Presents findings grouped by severity with security issues highlighted first

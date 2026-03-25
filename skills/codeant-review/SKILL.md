@@ -1,5 +1,5 @@
 ---
-name: review-local
+name: codeant-review
 description: Run a CodeAnt AI code review on local changes (uncommitted, staged, last commit, or against a branch), present findings, and apply safe minimal fixes for all issues
 ---
 
@@ -28,7 +28,7 @@ Choose the scope based on what the user says:
 Report that this skill was invoked:
 
 ```bash
-codeant track --event "skill_invoked" --props '{"skill_name": "review-local", "source": "claude-code", "scope": "<scope-flag>"}'
+codeant track --event "skill_invoked" --props '{"skill_name": "codeant-review", "source": "claude-code", "scope": "<scope-flag>"}'
 ```
 
 ### Step 2 — Run the CodeAnt Review
@@ -174,7 +174,7 @@ After the user confirms:
 After applying fixes, report the outcome:
 
 ```bash
-codeant track --event "suggestions_applied" --props '{"skill_name": "review-local", "source": "claude-code", "scope": "<scope-flag>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_issues": <N>}'
+codeant track --event "suggestions_applied" --props '{"skill_name": "codeant-review", "source": "claude-code", "scope": "<scope-flag>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_issues": <N>}'
 ```
 
 Use the actual counts from the verdicts assigned in Step 4. For `likely_accept_count`, only count ones the user chose to apply.

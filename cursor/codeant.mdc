@@ -4,6 +4,8 @@ globs:
 alwaysApply: true
 ---
 
+> **Deprecated**: This `.mdc` rule file is maintained for backward compatibility with older Cursor versions. For Cursor 2.4+, use the new Skills format instead — copy the `cursor/skills/` directory to `.cursor/skills/` in your project. See the [migration guide](https://docs.codeant.ai/cli/cursor-integration).
+
 # CodeAnt AI Integration
 
 You have access to the CodeAnt AI CLI for code review and PR comment resolution. Use these tools when the user asks you to review code, fix PR comments, or address review feedback.

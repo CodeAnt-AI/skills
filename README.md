@@ -56,6 +56,8 @@ The `/codeant-review` command reviews and fixes your local changes:
 
 ### Install (Cursor 2.4+ — Skills Format)
 
+Run these commands from your project root:
+
 ```bash
 mkdir -p .cursor/skills
 git clone https://github.com/CodeAnt-AI/skills.git /tmp/codeant-skills

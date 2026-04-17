@@ -1,4 +1,4 @@
-# CodeAnt AI — Claude Code Plugin & Cursor Rules
+# CodeAnt AI — Claude Code Plugin & Cursor Skills
 
 AI-powered code review and PR comment resolution — integrated into your AI coding workflow.
 
@@ -54,7 +54,37 @@ The `/codeant-review` command reviews and fixes your local changes:
 
 ## Cursor
 
-### Install
+### Install (Cursor 2.4+ — Skills Format)
+
+Run these commands from your project root:
+
+```bash
+mkdir -p .cursor/skills
+git clone https://github.com/CodeAnt-AI/skills.git /tmp/codeant-skills
+cp -r /tmp/codeant-skills/cursor/skills/* .cursor/skills/
+rm -rf /tmp/codeant-skills
+```
+
+This installs three skills:
+
+| Slash Command | Description |
+|---------------|-------------|
+| `/codeant-review` | Run a CodeAnt code review on local changes and fix all issues |
+| `/codeant-resolve-pr-comments` | Fetch unresolved CodeAnt review comments on a PR and fix them |
+| `/codeant-implement-repo-learnings` | Learn team review patterns and generate custom rules |
+
+Then use slash commands or ask Cursor naturally:
+
+```
+> /codeant-review
+> /codeant-resolve-pr-comments 42
+> Review my changes with CodeAnt
+> Fix all unaddressed CodeAnt comments on my current PR
+> /codeant-implement-repo-learnings
+```
+
+<details>
+<summary>Legacy install (older Cursor versions using .mdc rules)</summary>
 
 ```bash
 mkdir -p .cursor/rules
@@ -69,6 +99,9 @@ Then ask Cursor naturally:
 Review my changes with CodeAnt
 Fix all unaddressed CodeAnt comments on PR #42
 ```
+
+Note: The legacy `.mdc` rule does not include the `codeant-implement-repo-learnings` skill or the verdict system. We recommend migrating to the Skills format.
+</details>
 
 ## Prerequisites
 

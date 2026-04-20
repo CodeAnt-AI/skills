@@ -109,7 +109,15 @@ For each comment, run through these checks:
 
 1. **Check that the code the comment references still exists.** The file may have changed since the review. If the code at the referenced line no longer matches what the comment describes, mark as `STALE`.
 
-2. **If a code suggestion is present in the body:**
+2. **Detect if this is an Architect / Logical Review comment.** Architect reviews are identified by a title like "Architect Review", "Logical Review", or similar phrasing in the comment body, and typically include a `**Prompt for AI Agent**` section at the bottom. **These are first-class, important reviews — not optional suggestions.** Do NOT dismiss them as "big architectural changes" just because the title says architect. Many architect reviews require only a small, localized fix once you understand the intent. Treat them with the same seriousness as any other review.
+
+   When handling an architect/logical review:
+   - Read the **entire comment body**, including the `**Prompt for AI Agent**` section. The prompt under that section is the authoritative instruction for what to change — follow it.
+   - If the comment includes a concrete code suggestion, validate it normally (step 3 below).
+   - **If the comment has no explicit code suggestion, you MUST draft your own fix based on the `**Prompt for AI Agent**` section and the comment's intent.** Do not punt to the user with "no suggestion provided, review manually" — implement the fix yourself, keeping it minimal and localized. Then validate your drafted fix with the same checks in step 3/4.
+   - Only mark DO NOT ACCEPT if, after genuinely attempting to implement the fix, the change truly requires a broad restructuring that cannot be done safely in a minimal patch. A missing loading-state check, an added guard clause, a reordered await, or a small conditional wrapper is NOT a "big architectural change."
+
+3. **If a code suggestion is present in the body:**
    - Extract the suggested code from the markdown.
    - Compare it against the current code at that location.
    - Verify the suggestion is **syntactically valid** in context:
@@ -122,8 +130,8 @@ For each comment, run through these checks:
      - Does it remove error handling or null checks?
      - Does it change the behavior for edge cases?
 
-3. **If no code suggestion is present:**
-   - Analyze the comment to understand the requested change.
+4. **If no code suggestion is present:**
+   - Analyze the comment to understand the requested change. For architect/logical reviews, use the `**Prompt for AI Agent**` section as the primary instruction.
    - Draft a **minimal fix** — change only what is necessary to address the concern.
    - Do NOT refactor surrounding code, rename variables, or "improve" things beyond the scope of the comment.
    - Run the same validation checks as above on your drafted fix.
@@ -156,6 +164,8 @@ Assign this when ANY of these are true:
 - The suggestion introduces a dependency or import that doesn't exist in the project
 - The suggestion looks like a refactor disguised as a fix — it changes more than necessary
 - You cannot understand what the suggestion does or why it's better
+
+**Important:** Do NOT mark a comment DO NOT ACCEPT just because it is labeled "Architect Review" or "Logical Review" or because no code snippet is provided. Architect reviews are important and actionable — you are expected to implement the fix yourself based on the `**Prompt for AI Agent**` section. Only use DO NOT ACCEPT for architect reviews when the change genuinely requires a broad, multi-file restructuring that cannot be done as a minimal localized patch.
 
 **STALE — Code has changed since the review.**
 Assign this when:

@@ -18,6 +18,12 @@ That's it. You now have access to:
 | `/codeant-resolve-pr-comments` | Fetch all unaddressed CodeAnt review comments on a PR and fix them |
 | `/codeant-review` | Run a CodeAnt code review on local changes and fix all issues |
 | `/codeant-implement-repo-learnings` | Learn team review patterns from PR history and guidelines, generate custom rules in `.codeant/review.json` |
+| `/codeant-scans-sast` | Fetch top 10 SAST findings on the current branch and fix them |
+| `/codeant-scans-secrets` | Fetch top 10 secrets findings on the current branch and fix them |
+| `/codeant-scans-dead-code` | Fetch top 10 dead code findings on the current branch and fix them |
+| `/codeant-scans-anti-patterns` | Fetch top 10 anti-pattern findings on the current branch and fix them |
+| `/codeant-scans-docstring` | Fetch top 10 docstring findings on the current branch and fix them |
+| `/codeant-scans-complex-functions` | Fetch top 10 complex function findings on the current branch and fix them |
 
 ### Usage Examples
 
@@ -72,6 +78,12 @@ This installs three skills:
 | `/codeant-review` | Run a CodeAnt code review on local changes and fix all issues |
 | `/codeant-resolve-pr-comments` | Fetch unresolved CodeAnt review comments on a PR and fix them |
 | `/codeant-implement-repo-learnings` | Learn team review patterns and generate custom rules |
+| `/codeant-scans-sast` | Fetch top 10 SAST findings on the current branch and fix them |
+| `/codeant-scans-secrets` | Fetch top 10 secrets findings on the current branch and fix them |
+| `/codeant-scans-dead-code` | Fetch top 10 dead code findings on the current branch and fix them |
+| `/codeant-scans-anti-patterns` | Fetch top 10 anti-pattern findings on the current branch and fix them |
+| `/codeant-scans-docstring` | Fetch top 10 docstring findings on the current branch and fix them |
+| `/codeant-scans-complex-functions` | Fetch top 10 complex function findings on the current branch and fix them |
 
 Then use slash commands or ask Cursor naturally:
 

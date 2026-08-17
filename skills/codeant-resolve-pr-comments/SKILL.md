@@ -1,318 +1,351 @@
 ---
 name: codeant-resolve-pr-comments
-description: Find the pull request for the current branch, fetch all unresolved CodeAnt AI review comments, validate each code suggestion against surrounding context, and apply only safe, minimal fixes
+description: Find the pull request for the current branch on GitHub, GitLab, Bitbucket Cloud or Data Center, or Azure DevOps; retrieve unresolved inline CodeAnt AI review threads through the source-control provider; validate each finding; apply safe minimal fixes; verify them; and resolve only fixed threads. Use when asked to address, fix, triage, or resolve CodeAnt PR comments without installing or using codeant-cli.
 ---
 
-Find the pull request for the current branch, fetch all unresolved CodeAnt AI review comments, validate each code suggestion against the surrounding code context, and apply only safe, minimal fixes that do not break existing logic.
+# Resolve CodeAnt PR Comments
 
-## Instructions
+Use the source-control provider as the source of truth for PR metadata, review comments, and thread state. Never install, update, invoke, or fall back to `codeant-cli`. Never send CodeAnt telemetry.
 
-### Step 1 — Find the Pull Request
+## Workflow
 
-The goal is to identify the correct PR. Use the following logic in order:
+1. Run the preflight checks.
+2. Select exactly one provider adapter and fetch every result page.
+3. Keep only unresolved inline CodeAnt threads.
+4. Validate and classify every finding.
+5. Present the plan and obtain approval before editing.
+6. Apply approved fixes and run relevant verification.
+7. Resolve only threads whose fixes were applied and verified.
+8. Report results and offer to commit and push.
 
-**If the user provides a PR number** (e.g., `/codeant-resolve-pr-comments 42`):
+## 1. Preflight
 
-Use it directly. Skip to Step 2.
-
-**If no PR number is given**, detect it from the current branch:
-
-1. Get the current branch name:
-```bash
-git rev-parse --abbrev-ref HEAD
-```
-
-2. If the branch is `main`, `master`, or `develop`, stop and tell the user: "You are on the default branch. Please switch to a feature branch or provide a PR number."
-
-3. List open PRs filtered by the current branch:
-```bash
-codeant pr list --source-branch "<current-branch>" --state open --limit 5
-```
-
-4. The output is a JSON array of PR objects, each with these fields:
-   - `number` — PR number
-   - `title` — PR title
-   - `state` — open/closed
-   - `author` — who created it
-   - `sourceBranch` — the source branch name
-   - `targetBranch` — the target branch name
-   - `url` — link to the PR
-
-5. Match the correct PR:
-   - If exactly **one** PR is returned whose `sourceBranch` exactly matches the current branch name, use it.
-   - If **multiple** PRs match, present them to the user and ask which one to use.
-   - If **zero** PRs match, tell the user: "No open PR found for branch `<branch>`. Please provide a PR number." and stop.
-
-### Step 1b — Track Skill Invocation
-
-Report that this skill was invoked:
-
-```bash
-codeant track --event "skill_invoked" --props '{"skill_name": "codeant-resolve-pr-comments", "source": "claude-code", "pr_number": <N>, "pr_url": "<PR_URL>"}'
-```
-
-Where `<PR_URL>` is the `url` field from the PR object found in Step 1.
-
-### Step 2 — Fetch CodeAnt Review Comments
-
-Retrieve all review comments that CodeAnt AI posted on the PR:
-
-```bash
-codeant pr comments --pr-number <N> --codeant-generated true
-```
-
-The output is a JSON array of comment objects with these fields:
-
-| Field              | Description                                                     |
-|--------------------|-----------------------------------------------------------------|
-| `id`               | Unique comment identifier                                       |
-| `type`             | `"review"` (inline on code) or `"issue"` (general PR comment)  |
-| `author`           | Comment author (e.g., `codeant-bot`)                            |
-| `body`             | The full review comment text in markdown                        |
-| `path`             | File path where the comment was left (null for general comments)|
-| `line`             | Line number the comment refers to (null for general comments)   |
-| `createdAt`        | When the comment was posted                                     |
-| `isCodeantComment` | Boolean — true if posted by CodeAnt                             |
-| `resolved`         | Boolean — true if the comment has been marked resolved          |
-
-**Filter comments**: From the returned array:
-1. Keep only comments where `resolved` is `false`.
-2. **Skip general PR comments** (`type` is `"issue"` or `path` is null) — these are purely informational (status updates, sequence diagrams, quality gate results) and require no action. Do NOT include them in the summary or flag them for manual review.
-3. If no actionable comments remain after filtering, tell the user "All CodeAnt comments on PR #N are already resolved or informational." and stop.
-
-### Step 3 — Categorize the Comments
-
-Go through each remaining unresolved comment and categorize it:
-
-**Inline code comments** (`type` is `"review"` and `path` is not null):
-- These point to a specific file and line — they are actionable.
-- The `body` field contains the reviewer's feedback. It may include:
-  - A description of the issue
-  - A code suggestion embedded in a markdown fenced code block
-  - Sometimes a `suggestion` block (GitHub-style suggested change)
-
-### Step 4 — Analyze Each Comment and Assign a Verdict
-
-For each inline comment (grouped by file to minimize re-reading), do the following:
-
-#### 4a. Read and Understand the Context
-
-1. Read the file at the comment's `line` number, with **30 lines above and 30 lines below** for full context.
-2. Read the comment `body` carefully. Identify:
-   - **What is the problem?** — What the reviewer says is wrong.
-   - **Is there a code suggestion?** — Look for fenced code blocks (` ```suggestion `, ` ```python `, ` ```js `, etc.) or inline code that represents a replacement.
-   - **What is the intent?** — What behavior should the code have after the fix.
-
-#### 4b. Validate the Suggestion
-
-For each comment, run through these checks:
-
-1. **Check that the code the comment references still exists.** The file may have changed since the review. If the code at the referenced line no longer matches what the comment describes, mark as `STALE`.
-
-2. **Detect if this is an Architect / Logical Review comment.** Architect reviews are identified by a title like "Architect Review", "Logical Review", or similar phrasing in the comment body, and typically include a `**Prompt for AI Agent**` section at the bottom. **These are first-class, important reviews — not optional suggestions.** Do NOT dismiss them as "big architectural changes" just because the title says architect. Many architect reviews require only a small, localized fix once you understand the intent. Treat them with the same seriousness as any other review.
-
-   When handling an architect/logical review:
-   - Read the **entire comment body**, including the `**Prompt for AI Agent**` section. The prompt under that section is the authoritative instruction for what to change — follow it.
-   - If the comment includes a concrete code suggestion, validate it normally (step 3 below).
-   - **If the comment has no explicit code suggestion, you MUST draft your own fix based on the `**Prompt for AI Agent**` section and the comment's intent.** Do not punt to the user with "no suggestion provided, review manually" — implement the fix yourself, keeping it minimal and localized. Then validate your drafted fix with the same checks in step 3/4.
-   - Only mark DO NOT ACCEPT if, after genuinely attempting to implement the fix, the change truly requires a broad restructuring that cannot be done safely in a minimal patch. A missing loading-state check, an added guard clause, a reordered await, or a small conditional wrapper is NOT a "big architectural change."
-
-3. **If a code suggestion is present in the body:**
-   - Extract the suggested code from the markdown.
-   - Compare it against the current code at that location.
-   - Verify the suggestion is **syntactically valid** in context:
-     - Does it reference variables/functions that exist in scope?
-     - Does it use imports that are already present (or need to be added)?
-     - Does it match the language and style of the surrounding code?
-   - Verify the suggestion does **not break logic**:
-     - Does it change the return type or signature of a function?
-     - Does it alter control flow in a way that affects callers?
-     - Does it remove error handling or null checks?
-     - Does it change the behavior for edge cases?
-
-4. **If no code suggestion is present:**
-   - Analyze the comment to understand the requested change. For architect/logical reviews, use the `**Prompt for AI Agent**` section as the primary instruction.
-   - Draft a **minimal fix** — change only what is necessary to address the concern.
-   - Do NOT refactor surrounding code, rename variables, or "improve" things beyond the scope of the comment.
-   - Run the same validation checks as above on your drafted fix.
-
-#### 4c. Assign a Verdict to Each Comment
-
-Based on the validation, assign one of these verdicts to every comment:
-
-**ACCEPT — Safe to apply, you should accept this.**
-Assign this when ALL of these are true:
-- The suggestion fixes a genuine bug, security issue, or correctness problem
-- The suggested code is syntactically valid and all variables/imports are in scope
-- The change does NOT alter the function's return type, signature, or public API
-- The change does NOT remove or weaken existing error handling
-- The change does NOT affect behavior for inputs that were previously handled correctly
-- The fix is localized — it only touches the lines relevant to the issue
-
-**LIKELY ACCEPT — Looks correct, but verify the callers.**
-Assign this when:
-- The suggestion is logically sound and fixes a real issue
-- BUT it changes behavior in a way that callers or tests might depend on (e.g., a function now returns an error where it previously returned nil, or a previously permissive validation now rejects some inputs)
-- The fix itself is correct, but you cannot guarantee no downstream breakage without checking callers
-
-
-**DO NOT ACCEPT — This could break things.**
-Assign this when ANY of these are true:
-- The suggestion changes a function's return type or public interface
-- The suggestion removes existing error handling or fallback logic
-- The suggestion restructures control flow (reordering if/else, changing loop logic) beyond what the comment asks for
-- The suggestion introduces a dependency or import that doesn't exist in the project
-- The suggestion looks like a refactor disguised as a fix — it changes more than necessary
-- You cannot understand what the suggestion does or why it's better
-
-**Important:** Do NOT mark a comment DO NOT ACCEPT just because it is labeled "Architect Review" or "Logical Review" or because no code snippet is provided. Architect reviews are important and actionable — you are expected to implement the fix yourself based on the `**Prompt for AI Agent**` section. Only use DO NOT ACCEPT for architect reviews when the change genuinely requires a broad, multi-file restructuring that cannot be done as a minimal localized patch.
-
-**STALE — Code has changed since the review.**
-Assign this when:
-- The code at the referenced line no longer matches what the comment describes
-- The file has been renamed or deleted
-
-### Step 5 — Present the Summary with Verdicts
-
-Before making any changes, present a clear summary to the user:
-
-- **PR**: #N — "title" (link to PR)
-- **Total unresolved CodeAnt comments**: X
-
-Then list every comment grouped by verdict:
-
-**ACCEPT — Safe to apply (N):**
-For each, show:
-- File path and line number
-- One-line summary of the issue
-- One-line explanation of why this is safe: what exactly the fix does and why it cannot break anything
-- The actual code change (before → after) so the user can see it
-
-**LIKELY ACCEPT — Verify callers (N):**
-For each, show:
-- File path and line number
-- One-line summary of the issue
-- What the fix changes and why it's probably correct
-- What could break: specifically which callers, tests, or behaviors to check
-- The actual code change (before → after)
-
-**DO NOT ACCEPT — Could break logic (N):**
-For each, show:
-- File path and line number
-- One-line summary of what the comment asks for
-- Specific reason why the suggestion is risky — what exactly could break
-- What the user should do instead (e.g., "review manually", "check with the team", "test this path first")
-
-**STALE — Code changed since review (N):**
-For each, show:
-- File path and line number
-- What the comment expected to find vs. what's actually there now
-
-Then ask the user: "I will apply the N ACCEPT fixes now. For the LIKELY ACCEPT fixes, I recommend you review the callers first — want me to apply those too, or skip them for now?"
-
-### Step 6 — Apply the Fixes
-
-After the user confirms:
-
-- Apply all **ACCEPT** fixes.
-- Apply **LIKELY ACCEPT** fixes only if the user said yes.
-- Do **NOT** apply DO NOT ACCEPT or STALE fixes.
-- Make the smallest possible change that addresses each comment.
-- If the fix requires adding an import, add it.
-- If multiple comments refer to the same file, apply all fixes to that file before moving to the next file, being careful that fixes don't conflict with each other.
-
-### Step 6b — Track Results
-
-After applying fixes, report the outcome:
-
-```bash
-codeant track --event "suggestions_applied" --props '{"skill_name": "codeant-resolve-pr-comments", "source": "claude-code", "pr_number": <N>, "pr_url": "<PR_URL>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_comments": <N>}'
-```
-
-Use the actual counts from the verdicts assigned in Step 4. For `likely_accept_count`, only count ones the user chose to apply.
-
-### Step 7 — Report Results
-
-Present a final report:
-
-**Applied (N comments):**
-- For each: file, line, one-line summary of what was changed, and the verdict (ACCEPT or LIKELY ACCEPT).
-
-**Not applied — DO NOT ACCEPT (N comments):**
-- For each: file, line, specific reason the suggestion is risky.
-
-**Not applied — STALE (N comments):**
-- For each: file, line, what changed since the review.
-
-### Step 8 — Resolve Applied Conversations
-
-After applying fixes, resolve the corresponding review conversations on the PR so they no longer show as unresolved. For each comment that was successfully applied (ACCEPT and user-approved LIKELY ACCEPT), run:
-
-```bash
-codeant pr resolve --pr-number <N> --comment-id <COMMENT_ID>
-```
-
-The `--comment-id` flag takes the comment's `id` field from Step 2. The CLI will auto-detect the remote and repo, but you can also pass `--remote` and `--name` explicitly.
-
-**Platform-specific notes:**
-- **GitHub**: Uses `--comment-id` (the numeric comment ID). The CLI resolves the review thread containing that comment via the GraphQL API. If you already have the GraphQL thread node ID, you can pass `--thread-id` instead.
-- **GitLab**: Uses `--discussion-id` (the discussion ID from the comment's `discussionId` field).
-- **Bitbucket**: Uses `--comment-id` (the numeric comment ID).
-- **Azure DevOps**: Uses `--thread-id` (the numeric thread ID from the comment's `threadId` field).
-
-Run these in sequence (one per applied comment). If a resolve call fails (e.g., insufficient permissions), log a warning but do **not** stop — continue resolving the remaining comments and report any failures in the final summary.
-
-**Do NOT resolve:**
-- Comments marked DO NOT ACCEPT or STALE
-- Comments the user chose to skip
-- General PR comments (`type` is `"issue"`)
-
-### Step 9 — Offer to Commit and Push
-
-After presenting the final report, check which files were modified:
+Inspect the repository without modifying it:
 
 ```bash
 git status --short
+git branch --show-current
+git remote -v
 ```
 
-List the changed files to the user and ask:
+Preserve all pre-existing changes. Detect the provider from the remote host:
 
-"These are the files that were changed:
-- `<file1>`
-- `<file2>`
-- ...
+- `github.com` or GitHub Enterprise: GitHub.
+- `gitlab.com` or self-managed GitLab: GitLab.
+- `bitbucket.org`: Bitbucket Cloud.
+- Another Bitbucket Server/Data Center host: Bitbucket Data Center.
+- `dev.azure.com`, `ssh.dev.azure.com`, or `*.visualstudio.com`: Azure DevOps.
 
-Would you like me to commit and push these changes to the current branch? You can also tell me to commit only specific files."
+If detection is ambiguous, ask which provider hosts the PR. If the user supplied a PR/MR URL or number, use it. Otherwise find an open PR whose source branch exactly equals the current branch. If on the default branch, require a PR number or URL. If zero or multiple exact matches exist, stop and ask the user to identify the PR.
 
-- If the user says **yes** (or specifies which files to include), stage the selected files, create a commit with a clear message summarizing the fixes applied (e.g., "Apply CodeAnt review fixes for PR #N"), and push to the current branch.
-- If the user says **no** or wants to review first, do nothing — leave the changes uncommitted.
-- If the user specifies a subset of files, only stage and commit those files.
+Use already-configured provider authentication. Do not install CLIs, expose tokens, print credential-bearing headers, or put secrets in generated files. If authentication is missing, name the required provider login/token and stop.
 
-### Step 0 — Ensure codeant-cli is up to date
+### Filter CodeAnt suggestions
 
-Before doing anything else, check that the `codeant` CLI is on the latest version:
+After fetching the PR's review comments, retain only unresolved inline suggestions generated by CodeAnt. Treat an inline comment as CodeAnt-generated when either condition is true:
+
+- Its author login, username, nickname, or display name case-insensitively equals `codeant-ai`, `codeant-ai[bot]`, `codeant-bot`, or `CodeAnt AI`.
+- Its body contains a CodeAnt action URL beginning with `https://app.codeant.ai/fix-in-ide` or `https://app.codeant.ai/feedback`.
+
+Use the body signature because GitLab and Azure DevOps can attribute CodeAnt comments to the connected human account. Do not require a bot author when the body signature matches, and do not run a separate identity-discovery or confirmation step. Do not classify a comment from the word `CodeAnt` alone; require an exact service-account name or CodeAnt action URL.
+
+Skip general PR comments, summaries, quality-gate reports, system messages, deleted comments, drafts, and replies that do not begin an inline finding. If no matching suggestions remain, report that the PR has no unresolved CodeAnt inline suggestions and stop. Otherwise continue directly to validation.
+
+## 2. Provider adapters
+
+Choose only the matching adapter. Normalize each actionable item to:
+
+```text
+thread_id, comment_id, author_id, body, path, line, url,
+resolved, outdated_or_stale, provider
+```
+
+Retain provider-native IDs exactly because they are required for resolution.
+
+### GitHub
+
+Require authenticated `gh`. Determine the PR and repository:
 
 ```bash
-npm view codeant-cli version
+gh auth status
+gh pr view <number-or-url> --json number,title,url,state,headRefName,baseRefName
+gh repo view --json nameWithOwner --jq .nameWithOwner
 ```
 
-Compare this with the installed version:
+Without a PR number, try `gh pr view` on the current branch. If necessary, list exact branch matches:
 
 ```bash
-codeant --version
+gh pr list --head "<branch>" --state open \
+  --json number,title,url,state,headRefName,baseRefName
 ```
 
-If the installed version is older than the latest published version, update it:
+Fetch and paginate review threads with GitHub GraphQL. Use `--paginate --slurp`; the pagination variable must be named `$endCursor`:
 
 ```bash
-npm install -g codeant-cli@latest
+gh api graphql --paginate --slurp \
+  -f owner='<owner>' \
+  -f name='<repository>' \
+  -F number=<pr-number> \
+  -f query='query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+    repository(owner: $owner, name: $name) {
+      pullRequest(number: $number) {
+        number title url
+        reviewThreads(first: 100, after: $endCursor) {
+          nodes {
+            id isResolved isOutdated
+            comments(first: 100) {
+              nodes {
+                databaseId
+                author { login }
+                body path line originalLine createdAt url
+              }
+            }
+          }
+          pageInfo { hasNextPage endCursor }
+        }
+      }
+    }
+  }'
 ```
 
-If the update fails (e.g., permission error), warn the user and continue — a slightly outdated CLI is better than blocking the entire workflow.
+Retry this read-only fetch up to three times for transient HTTP 429, 502, 503, or 504 responses, honoring `Retry-After` when present. Do not retry authentication, authorization, schema, or validation errors.
 
-### Important Rules
-- Do **NOT** modify files that are not referenced in the comments.
-- Do **NOT** apply a suggestion if you cannot verify it is safe. It is always better to skip and explain than to break the code.
-- Do **NOT** batch-apply suggestions blindly. Validate each one individually.
-- If two comments conflict (e.g., one says add a check, another says remove it), flag both and ask the user.
-- Keep fixes **minimal**. A fix for a missing null check should add the null check — not restructure the function.
+Across every returned page, keep a thread only when:
+
+- `isResolved` is `false`.
+- The root comment matches the CodeAnt author-or-body filtering rule.
+- The root comment has a non-null `path`; use `line`, falling back to `originalLine` only to locate historical context.
+
+Carry `isOutdated` into stale validation. Resolve a successfully fixed thread with its GraphQL thread node ID, not the numeric comment ID:
+
+```bash
+gh api graphql \
+  -f threadId='<thread-node-id>' \
+  -f query='mutation($threadId: ID!) {
+    resolveReviewThread(input: {threadId: $threadId}) {
+      thread { id isResolved }
+    }
+  }'
+```
+
+Require the response to confirm `isResolved: true`.
+
+### GitLab
+
+Require authenticated `glab`. A GitLab merge request IID is project-local; do not confuse it with a global database ID.
+
+```bash
+glab auth status
+glab mr view <iid-or-url> --output json
+glab repo view --output json
+```
+
+Without an IID, find the sole open MR whose `source_branch` exactly matches the current branch:
+
+```bash
+glab mr list --source-branch "<branch>" --state opened --output json
+```
+
+Use the numeric project ID returned by `glab repo view` to avoid path-encoding errors. Fetch all discussion pages:
+
+```bash
+glab api --paginate \
+  "projects/<project-id>/merge_requests/<mr-iid>/discussions?per_page=100"
+```
+
+Keep a discussion only when:
+
+- `individual_note` is `false`.
+- Its root note matches the CodeAnt author-or-body filtering rule. GitLab may show the connected human user as the author, so accept a matching CodeAnt action URL in `body`.
+- The CodeAnt root note is `resolvable: true` and `resolved: false`.
+- The note has a diff `position` with `new_path` or `old_path`; prefer `new_line`, otherwise use `old_line` for context.
+
+Carry the discussion `id` as `thread_id` and the root note `id` as `comment_id`. Resolve a successfully fixed discussion:
+
+```bash
+glab api --method PUT \
+  "projects/<project-id>/merge_requests/<mr-iid>/discussions/<discussion-id>" \
+  -f resolved=true
+```
+
+Require the returned discussion to show the relevant resolvable note as resolved.
+
+### Bitbucket Cloud
+
+Use the Bitbucket Cloud REST API 2.0 with existing OAuth, access-token, or API-token authentication. Parse `<workspace>/<repo-slug>` from the remote or PR URL. Never echo the credential.
+
+If no PR number was supplied, list open PRs and select the sole exact `source.branch.name` match. Use URL encoding for query values:
+
+```text
+GET https://api.bitbucket.org/2.0/repositories/<workspace>/<repo-slug>/pullrequests
+    ?state=OPEN&pagelen=100
+```
+
+Fetch all comment pages and follow the response's `next` URL until it is absent:
+
+```text
+GET https://api.bitbucket.org/2.0/repositories/<workspace>/<repo-slug>/pullrequests/<pr-id>/comments
+    ?pagelen=100
+```
+
+Keep a comment only when:
+
+- `deleted` is not `true` and `pending` is not `true`.
+- It is a root comment, not a reply.
+- `inline.path` is present; use `inline.to` for the new-file line or `inline.from` for the old-file line.
+- `resolution` is null or absent.
+- The comment matches the CodeAnt author-or-body filtering rule using `user.nickname`, `user.display_name`, or `content.raw`.
+
+Retain the root comment `id`. Resolve a successfully fixed thread:
+
+```text
+POST https://api.bitbucket.org/2.0/repositories/<workspace>/<repo-slug>/pullrequests/<pr-id>/comments/<comment-id>/resolve
+Accept: application/json
+```
+
+Require HTTP 200 and a returned resolution object. Never delete the comment as a substitute for resolving it.
+
+### Bitbucket Data Center
+
+Use the host's `/rest/api/latest` API with existing bearer, personal-access-token, or session authentication. Parse `<base-url>`, `<project-key>`, and `<repo-slug>` from the remote or PR URL.
+
+If no PR ID was supplied, paginate open PRs and select the sole item whose `fromRef.displayId` exactly matches the current branch:
+
+```text
+GET <base-url>/rest/api/latest/projects/<project-key>/repos/<repo-slug>/pull-requests
+    ?state=OPEN&limit=100&start=<offset>
+```
+
+Follow `nextPageStart` until `isLastPage` is true. Fetch all comment pages the same way:
+
+```text
+GET <base-url>/rest/api/latest/projects/<project-key>/repos/<repo-slug>/pull-requests/<pr-id>/comments
+    ?limit=100&start=<offset>
+```
+
+Keep root comments that match the CodeAnt author-or-body filtering rule using `author.name`, `author.slug`, `author.displayName`, or `text`, and whose `anchor.path` is present, `pending` is not true, `state` is `OPEN`, and `threadResolved` is false. Use `anchor.line` and the full anchored path.
+
+To resolve a successfully fixed thread, first refetch the comment to obtain its current `version`, then update it with optimistic concurrency:
+
+```text
+PUT <base-url>/rest/api/latest/projects/<project-key>/repos/<repo-slug>/pull-requests/<pr-id>/comments/<comment-id>
+Content-Type: application/json
+
+{
+  "id": <comment-id>,
+  "version": <current-version>,
+  "text": <unchanged-current-text>,
+  "state": "OPEN",
+  "severity": <unchanged-current-severity>,
+  "threadResolved": true
+}
+```
+
+Preserve the current text, state, severity, and required properties. On HTTP 409, refetch and retry only if the thread is still the same unresolved comment. Require the response to show `threadResolved: true`.
+
+### Azure DevOps (ADO)
+
+Use Azure DevOps REST API 7.1 with existing OAuth or PAT authentication. Parse the organization, project, and repository from the remote or PR URL. Prefer immutable repository and identity IDs. Do not log the `Authorization` header.
+
+If no PR ID was supplied, URL-encode the full source ref and select the sole active exact match:
+
+```text
+GET https://dev.azure.com/<organization>/<project>/_apis/git/repositories/<repository-id>/pullrequests
+    ?searchCriteria.status=active
+    &searchCriteria.sourceRefName=refs/heads/<branch>
+    &$top=100
+    &api-version=7.1
+```
+
+Fetch PR threads:
+
+```text
+GET https://dev.azure.com/<organization>/<project>/_apis/git/repositories/<repository-id>/pullRequests/<pr-id>/threads
+    ?api-version=7.1
+```
+
+Keep a thread only when:
+
+- `status` is `active` or `pending`.
+- `threadContext.filePath` is present; use `rightFileStart.line`, otherwise `leftFileStart.line`.
+- Its root non-system, non-deleted comment has `commentType: text`.
+- The root comment matches the CodeAnt author-or-body filtering rule using `author.uniqueName`, `author.displayName`, or `content`. Azure DevOps may show the connected human user as the author.
+
+Carry the numeric thread `id` and root comment `id`. Resolve a successfully fixed thread by marking it fixed:
+
+```text
+PATCH https://dev.azure.com/<organization>/<project>/_apis/git/repositories/<repository-id>/pullRequests/<pr-id>/threads/<thread-id>
+Content-Type: application/json
+
+{"status":"fixed"}
+```
+
+Use `api-version=7.1` and require the returned thread to show `status: fixed`. Do not use `closed`, `wontFix`, or `byDesign` for an applied fix.
+
+## 3. Validate every finding
+
+Group findings by file. For each finding:
+
+1. Read the complete comment and at least 30 lines above and below the referenced line.
+2. Inspect definitions, callers, tests, and repository guidance needed to understand the claimed behavior.
+3. Identify the defect, expected behavior, reproduction path, and any fenced suggestion.
+4. If the provider marks the position outdated, the file is gone, or current code no longer matches the claim, assign `STALE` unless the same defect clearly remains at the referenced code.
+5. Treat Architect Review and Logical Review comments as actionable. Read the complete `Prompt for AI Agent` section and draft a localized fix when no suggestion is supplied.
+6. Validate syntax, scope, imports, types, error handling, public interfaces, edge cases, concurrency, and compatibility with callers.
+7. Prefer the smallest correct fix. Do not refactor adjacent code for style.
+
+Assign exactly one verdict:
+
+- `ACCEPT`: The defect is real and the localized fix is safe without changing a public contract or weakening handling.
+- `LIKELY ACCEPT`: The fix is sound, but a behavior change may affect callers or requires targeted validation.
+- `DO NOT ACCEPT`: The proposal is unsafe, unjustified, depends on unavailable APIs, or requires broader design work than a focused patch can safely provide.
+- `STALE`: The referenced code or defect is no longer present.
+
+Do not reject an Architect or Logical Review solely because it lacks a ready-made patch.
+
+## 4. Present the plan before editing
+
+Report the provider, PR number, title, link, and unresolved CodeAnt inline-thread count. Group every finding by verdict. For each, include:
+
+- File and line.
+- One-line issue summary.
+- Validation rationale.
+- Intended before/after change when applicable.
+- For `LIKELY ACCEPT`, the exact callers, tests, or behavior needing verification.
+
+State that `ACCEPT` fixes are ready and ask whether to include named `LIKELY ACCEPT` fixes. Do not edit before approval. Never apply `DO NOT ACCEPT` or `STALE` findings.
+
+## 5. Apply and verify
+
+After approval:
+
+1. Recheck `git status --short` and preserve pre-existing edits.
+2. Apply only confirmed fixes to files referenced by comments, except narrowly required tests or imports.
+3. Review the diff for accidental changes and interactions between fixes.
+4. Run the narrowest relevant formatter, static checks, and tests; expand when shared behavior changed.
+5. Repair only failures caused by these edits. If a fix cannot be verified, revert only that fix if safely separable, leave its thread unresolved, and report it.
+
+## 6. Resolve and report
+
+Resolving a thread is an external mutation. Resolve threads sequentially only after the user approved the corresponding fix and local verification passed. Continue after individual resolution failures.
+
+Never resolve `DO NOT ACCEPT`, `STALE`, skipped, partially fixed, or unverified findings. Refetch thread state after resolution when the provider response is ambiguous.
+
+Final report:
+
+- Applied and verified fixes with file, line, verdict, and test result.
+- Unapplied findings with verdict and reason.
+- Provider thread IDs resolved and any resolution failures.
+- Final `git status --short` and files changed by this workflow.
+
+Offer to commit and push selected files. Do not commit or push without explicit approval.
+
+## Guardrails
+
+- Fetch every pagination page before claiming the list is complete.
+- Treat provider-native thread state as authoritative.
+- Validate suggestions individually; never batch-apply blindly.
+- Preserve unrelated user changes and avoid unrelated files.
+- Flag conflicting comments rather than choosing silently.
+- Never disclose access tokens, PATs, cookies, or verbose auth output.
+- Never install, invoke, or rely on `codeant-cli` for any step.

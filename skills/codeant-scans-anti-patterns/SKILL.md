@@ -53,7 +53,7 @@ Wait for the user's response before continuing. Default to `all` if the user doe
 ### Step 1b — Track skill invocation
 
 ```bash
-codeant track --event "skill_invoked" --props '{"skill_name": "codeant-scans-anti-patterns", "source": "claude-code", "repo": "<REPO>", "branch": "<BRANCH>", "severity": "<SEVERITY>"}'
+codeant track --event "skill_invoked" --props '{"skill_name": "codeant-scans-anti-patterns", "source": "agent-skills", "repo": "<REPO>", "branch": "<BRANCH>", "severity": "<SEVERITY>"}'
 ```
 
 ### Step 2 — Fetch scan findings
@@ -185,7 +185,7 @@ After the user confirms:
 After applying fixes, report the outcome:
 
 ```bash
-codeant track --event "suggestions_applied" --props '{"skill_name": "codeant-scans-anti-patterns", "source": "claude-code", "repo": "<REPO>", "branch": "<BRANCH>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_findings": <N>}'
+codeant track --event "suggestions_applied" --props '{"skill_name": "codeant-scans-anti-patterns", "source": "agent-skills", "repo": "<REPO>", "branch": "<BRANCH>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_findings": <N>}'
 ```
 
 Use the actual counts from the verdicts assigned in Step 4. For `likely_accept_count`, only count ones the user chose to apply.

@@ -48,7 +48,7 @@ codeant pr list --source-branch "<current-branch>" --state open --limit 5
 Report that this skill was invoked:
 
 ```bash
-codeant track --event "skill_invoked" --props '{"skill_name": "codeant-resolve-quality-gates", "source": "claude-code", "pr_number": <N>, "pr_url": "<PR_URL>"}'
+codeant track --event "skill_invoked" --props '{"skill_name": "codeant-resolve-quality-gates", "source": "agent-skills", "pr_number": <N>, "pr_url": "<PR_URL>"}'
 ```
 
 Where `<PR_URL>` is the `url` field from the PR object found in Step 1.
@@ -225,7 +225,7 @@ For **Secrets** specifically: replace the literal with an environment variable l
 After applying fixes, report the outcome:
 
 ```bash
-codeant track --event "suggestions_applied" --props '{"skill_name": "codeant-resolve-quality-gates", "source": "claude-code", "pr_number": <N>, "pr_url": "<PR_URL>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_findings": <N>, "failed_gates": "<comma-separated list>"}'
+codeant track --event "suggestions_applied" --props '{"skill_name": "codeant-resolve-quality-gates", "source": "agent-skills", "pr_number": <N>, "pr_url": "<PR_URL>", "accept_count": <N>, "likely_accept_count": <N>, "do_not_accept_count": <N>, "stale_count": <N>, "total_findings": <N>, "failed_gates": "<comma-separated list>"}'
 ```
 
 Use the actual counts from the verdicts assigned in Step 4. For `likely_accept_count`, only count ones the user chose to apply.

@@ -70,7 +70,7 @@ If it does not exist, continue normally.
 ### Step 0d — Track Skill Invocation
 
 ```bash
-codeant track --event "skill_invoked" --props '{"skill_name": "codeant-implement-repo-learnings", "source": "claude-code"}'
+codeant track --event "skill_invoked" --props '{"skill_name": "codeant-implement-repo-learnings", "source": "agent-skills"}'
 ```
 
 ### Step 1 — Fetch the Last 100 Merged Pull Requests
@@ -486,7 +486,7 @@ Would you like me to commit the file now?"
 ### Step 13b — Track Results
 
 ```bash
-codeant track --event "custom_rules_generated" --props '{"skill_name": "codeant-implement-repo-learnings", "source": "claude-code", "rules_count": <N>, "prs_analyzed": <M>, "feedback_comments": <K>, "bugfix_commits": <P>, "guideline_files": <G>, "rules_skipped": <Z>, "existing_rules_preserved": <E>}'
+codeant track --event "custom_rules_generated" --props '{"skill_name": "codeant-implement-repo-learnings", "source": "agent-skills", "rules_count": <N>, "prs_analyzed": <M>, "feedback_comments": <K>, "bugfix_commits": <P>, "guideline_files": <G>, "rules_skipped": <Z>, "existing_rules_preserved": <E>}'
 ```
 
 ### Important Rules

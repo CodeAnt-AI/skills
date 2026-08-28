@@ -89,9 +89,11 @@ Run these commands from your project root:
 ```bash
 mkdir -p .cursor/skills
 git clone https://github.com/CodeAnt-AI/skills.git /tmp/codeant-skills
-cp -r /tmp/codeant-skills/cursor/skills/* .cursor/skills/
+cp -r /tmp/codeant-skills/skills/* .cursor/skills/
 rm -rf /tmp/codeant-skills
 ```
+
+Cursor uses the same canonical skill packages under `skills/` as every other compatible assistant; there is no separate Cursor-specific skillset.
 
 This installs these skills:
 
@@ -140,24 +142,24 @@ Note: The legacy `.mdc` rule does not include the `codeant-implement-repo-learni
 
 ## Skill Dependencies
 
-The skills use either the CodeAnt CLI or the source-control provider APIs directly. Runtime dependencies differ between Claude Code and Cursor:
+The canonical skills use either the CodeAnt CLI or source-control provider APIs directly. Every compatible assistant uses the same dependency model:
 
-| Skill | Claude Code | Cursor |
-|-------|-------------|--------|
-| `/codeant-resolve-pr-comments` | Provider APIs directly; CodeAnt CLI not used | CodeAnt CLI required |
-| `/codeant-resolve-quality-gates` | CodeAnt CLI required | CodeAnt CLI required |
-| `/codeant-review` | CodeAnt CLI required | CodeAnt CLI required |
-| `/codeant-implement-repo-learnings` | CodeAnt CLI required | CodeAnt CLI required |
-| `/codeant-scans-sast` | CodeAnt CLI required | CodeAnt CLI required |
-| `/codeant-scans-secrets` | CodeAnt CLI required | CodeAnt CLI required |
-| `/codeant-scans-dead-code` | CodeAnt CLI required | CodeAnt CLI required |
-| `/codeant-scans-anti-patterns` | CodeAnt CLI required | CodeAnt CLI required |
-| `/codeant-scans-docstring` | CodeAnt CLI required | CodeAnt CLI required |
-| `/codeant-scans-complex-functions` | CodeAnt CLI required | CodeAnt CLI required |
+| Skill | Runtime dependency |
+|-------|--------------------|
+| `/codeant-resolve-pr-comments` | Provider APIs directly; CodeAnt CLI not used |
+| `/codeant-resolve-quality-gates` | CodeAnt CLI required |
+| `/codeant-review` | CodeAnt CLI required |
+| `/codeant-implement-repo-learnings` | CodeAnt CLI required |
+| `/codeant-scans-sast` | CodeAnt CLI required |
+| `/codeant-scans-secrets` | CodeAnt CLI required |
+| `/codeant-scans-dead-code` | CodeAnt CLI required |
+| `/codeant-scans-anti-patterns` | CodeAnt CLI required |
+| `/codeant-scans-docstring` | CodeAnt CLI required |
+| `/codeant-scans-complex-functions` | CodeAnt CLI required |
 
 `/codeant-resolve-quality-gates` is currently CLI-backed: it uses `codeant pr list` and `codeant pr comments`, and may use `codeant security-analysis` for detailed SCA findings.
 
-The Claude plugin declares `codeant` as a shared plugin prerequisite because most included skills need it, so installation may still prompt for the CLI. At runtime, the Claude version of `/codeant-resolve-pr-comments` never installs, invokes, or falls back to the CodeAnt CLI.
+Most canonical skills require `codeant` at runtime and prompt for it when needed. Regardless of assistant, `/codeant-resolve-pr-comments` never installs, invokes, or falls back to the CodeAnt CLI.
 
 ## Prerequisites
 
@@ -178,7 +180,7 @@ codeant set-token <github|gitlab|bitbucket|azure> <your-token>
 
 ### Direct provider API skill
 
-The Claude version of `/codeant-resolve-pr-comments` does not require CodeAnt CLI. It uses already-configured provider authentication instead:
+The canonical `/codeant-resolve-pr-comments` skill does not require CodeAnt CLI. It uses already-configured provider authentication instead:
 
 - GitHub: authenticated `gh` CLI.
 - GitLab: authenticated `glab` CLI.

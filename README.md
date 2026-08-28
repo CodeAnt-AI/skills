@@ -1,6 +1,27 @@
-# CodeAnt AI — Claude Code Plugin & Cursor Skills
+# CodeAnt AI — Agent Skills for AI Coding Assistants
 
-AI-powered code review and PR comment resolution — integrated into your AI coding workflow.
+AI-powered code review and PR comment resolution — integrated into your AI coding workflow through the open Agent Skills (`SKILL.md`) format.
+
+## Compatible AI Coding Assistants
+
+These skills can run in AI coding assistants that support the Agent Skills standard, including:
+
+- Claude Code
+- Cursor
+- GitHub Copilot in VS Code, JetBrains IDEs, the Copilot CLI, and the Copilot coding agent
+- Kiro IDE, CLI, and web agent
+- OpenAI Codex
+- Gemini CLI and Antigravity
+- Amp
+- OpenCode
+- Goose
+- Junie
+- Cline and Continue
+- Other Agent Skills-compatible assistants
+
+The repository currently provides first-party installation instructions for Claude Code and Cursor below. For another compatible assistant, copy the directories under `skills/` into that assistant's project or user skills directory. For example, use `.github/skills/` for GitHub Copilot and `.kiro/skills/` for Kiro.
+
+Compatibility with the Agent Skills format does not automatically provide external tools or credentials. The assistant must have shell and filesystem access plus the provider authentication and CodeAnt CLI dependencies listed in [Skill Dependencies](#skill-dependencies). Individual hosts may require additional permission prompts, and not every host listed above is continuously tested by CodeAnt.
 
 ## Claude Code
 
@@ -16,6 +37,7 @@ That's it. You now have access to:
 | Command | Description |
 |---------|-------------|
 | `/codeant-resolve-pr-comments` | Fetch all unaddressed CodeAnt review comments on a PR and fix them |
+| `/codeant-resolve-quality-gates` | Find failed CodeAnt quality gates on a PR and fix actionable findings |
 | `/codeant-review` | Run a CodeAnt code review on local changes and fix all issues |
 | `/codeant-implement-repo-learnings` | Learn team review patterns from PR history and guidelines, generate custom rules in `.codeant/review.json` |
 | `/codeant-scans-sast` | Fetch top 10 SAST findings on the current branch and fix them |
@@ -71,12 +93,13 @@ cp -r /tmp/codeant-skills/cursor/skills/* .cursor/skills/
 rm -rf /tmp/codeant-skills
 ```
 
-This installs three skills:
+This installs these skills:
 
 | Slash Command | Description |
 |---------------|-------------|
 | `/codeant-review` | Run a CodeAnt code review on local changes and fix all issues |
 | `/codeant-resolve-pr-comments` | Fetch unresolved CodeAnt review comments on a PR and fix them |
+| `/codeant-resolve-quality-gates` | Find failed CodeAnt quality gates on a PR and fix actionable findings |
 | `/codeant-implement-repo-learnings` | Learn team review patterns and generate custom rules |
 | `/codeant-scans-sast` | Fetch top 10 SAST findings on the current branch and fix them |
 | `/codeant-scans-secrets` | Fetch top 10 secrets findings on the current branch and fix them |
@@ -115,20 +138,52 @@ Fix all unaddressed CodeAnt comments on PR #42
 Note: The legacy `.mdc` rule does not include the `codeant-implement-repo-learnings` skill or the verdict system. We recommend migrating to the Skills format.
 </details>
 
+## Skill Dependencies
+
+The skills use either the CodeAnt CLI or the source-control provider APIs directly. Runtime dependencies differ between Claude Code and Cursor:
+
+| Skill | Claude Code | Cursor |
+|-------|-------------|--------|
+| `/codeant-resolve-pr-comments` | Provider APIs directly; CodeAnt CLI not used | CodeAnt CLI required |
+| `/codeant-resolve-quality-gates` | CodeAnt CLI required | CodeAnt CLI required |
+| `/codeant-review` | CodeAnt CLI required | CodeAnt CLI required |
+| `/codeant-implement-repo-learnings` | CodeAnt CLI required | CodeAnt CLI required |
+| `/codeant-scans-sast` | CodeAnt CLI required | CodeAnt CLI required |
+| `/codeant-scans-secrets` | CodeAnt CLI required | CodeAnt CLI required |
+| `/codeant-scans-dead-code` | CodeAnt CLI required | CodeAnt CLI required |
+| `/codeant-scans-anti-patterns` | CodeAnt CLI required | CodeAnt CLI required |
+| `/codeant-scans-docstring` | CodeAnt CLI required | CodeAnt CLI required |
+| `/codeant-scans-complex-functions` | CodeAnt CLI required | CodeAnt CLI required |
+
+`/codeant-resolve-quality-gates` is currently CLI-backed: it uses `codeant pr list` and `codeant pr comments`, and may use `codeant security-analysis` for detailed SCA findings.
+
+The Claude plugin declares `codeant` as a shared plugin prerequisite because most included skills need it, so installation may still prompt for the CLI. At runtime, the Claude version of `/codeant-resolve-pr-comments` never installs, invokes, or falls back to the CodeAnt CLI.
+
 ## Prerequisites
 
-- [CodeAnt CLI](https://docs.codeant.ai/cli/setup) installed and authenticated:
+### CLI-backed skills
+
+For every skill marked "CodeAnt CLI required" above, install and authenticate the [CodeAnt CLI](https://docs.codeant.ai/cli/setup):
 
 ```bash
 npm install -g codeant-cli
 codeant login
 ```
 
-- For PR features, configure your SCM token:
+For CLI-backed PR features, configure the matching source-control token:
 
 ```bash
-codeant set-token github <your-token>
+codeant set-token <github|gitlab|bitbucket|azure> <your-token>
 ```
+
+### Direct provider API skill
+
+The Claude version of `/codeant-resolve-pr-comments` does not require CodeAnt CLI. It uses already-configured provider authentication instead:
+
+- GitHub: authenticated `gh` CLI.
+- GitLab: authenticated `glab` CLI.
+- Bitbucket Cloud or Data Center: an existing OAuth, access-token, PAT, or authenticated session supported by the host.
+- Azure DevOps: `AZURE_DEVOPS_PAT` when present. It may contain a plain PAT or a Base64-encoded recognized PAT/Basic credential payload; otherwise use an already-configured non-interactive OAuth or Microsoft Entra token.
 
 ## Documentation
 

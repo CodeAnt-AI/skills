@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "AI-powered code review and PR comment resolution with CodeAnt AI",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "plugins": [
     {
       "name": "codeant",
       "source": "./.",
       "description": "AI-powered code review and PR comment resolution with CodeAnt AI",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {
         "name": "CodeAnt AI",
         "email": "support@codeant.ai"
